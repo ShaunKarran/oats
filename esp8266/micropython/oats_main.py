@@ -1,5 +1,5 @@
 import machine
-import urequests
+import oats_urequests
 
 import credentials
 import wifi
@@ -22,9 +22,8 @@ def enter_deepsleep():
 
 
 def send_flowdock_message():
-    # data = {"content": "Sorry about all the tests.", "external_user_name": "ESP8266"}
-    data = {"event": "message", "content": "Sorry about all the tests.", "external_user_name": "ESP8266"}
-    return urequests.post(
+    data = {"event": "message", "content": ":nam_thumbleweed:", "external_user_name": "OATS"}
+    return oats_urequests.post(
         REST_MESSAGES_API_URL,
         json=data,
         headers={"Authorization": "Basic {}".format(credentials.BASE64_TOKEN)},
@@ -37,6 +36,13 @@ def run():
     # If wifi connection fails we simply sleep, and will try again upon waking.
     if not wifi_connected:
         enter_deepsleep()
+
+    pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
+
+    while True:
+        print(pin.value())
+        if pin.value() == 0:
+            send_flowdock_message()
 
     send_flowdock_message()
 
