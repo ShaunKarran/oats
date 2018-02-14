@@ -7,10 +7,7 @@ import wifi
 # Switch - D1/GPIO5
 SWITCH_PIN = 5
 
-PUSH_CHAT_API_URL = "https://api.flowdock.com/v1/messages/chat/{api_token}".format(api_token=credentials.FLOW_API_TOKEN)
-REST_MESSAGES_API_URL = "https://{api_token}@api.flowdock.com/flows/biarri/brisbane-toilet-status/messages".format(
-    api_token=credentials.PERSONAL_API_TOKEN
-)
+REST_MESSAGES_API_URL = "https://api.flowdock.com/flows/biarri/brisbane-toilet-status/messages"
 
 
 def enter_deepsleep():
@@ -27,7 +24,11 @@ def enter_deepsleep():
 def send_flowdock_message():
     # data = {"content": "Sorry about all the tests.", "external_user_name": "ESP8266"}
     data = {"event": "message", "content": "Sorry about all the tests.", "external_user_name": "ESP8266"}
-    return urequests.post(REST_MESSAGES_API_URL, json=data)
+    return urequests.post(
+        REST_MESSAGES_API_URL,
+        json=data,
+        headers={"Authorization": "Basic {}".format(credentials.BASE64_TOKEN)},
+    )
 
 
 def run():
