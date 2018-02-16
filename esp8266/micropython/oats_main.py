@@ -1,28 +1,19 @@
 import machine
-import oats_urequests
 
 import credentials
+import oats_urequests
 import wifi
 
-# Switch - D1/GPIO5
-SWITCH_PIN = 5
+D1_PIN = 5
+D2_PIN = 4
 
 REST_MESSAGES_API_URL = "https://api.flowdock.com/flows/biarri/brisbane-toilet-status/messages"
 
-
-def enter_deepsleep():
-    # configure RTC.ALARM0 to be able to wake the device
-    # rtc = machine.RTC()
-    # rtc.irq(trigger=rtc.ALARM0, wake=machine.DEEPSLEEP)
-
-    # Set RTC.ALARM0 to fire, waking the device. Argument is in micro seconds. Multiply by 1e6 for seconds.
-    print("INFO: Entering deepsleep")
-    # rtc.alarm(rtc.ALARM0, SLEEPING_TIME_IN_SECONDS * 1000000)
-    machine.deepsleep()
+MAX_COUNT = 100
 
 
-def send_flowdock_message():
-    data = {"event": "message", "content": ":nam_thumbleweed:", "external_user_name": "OATS"}
+def send_flowdock_message(message):
+    data = {"event": "message", "content": message, "external_user_name": "OATS"}
     return oats_urequests.post(
         REST_MESSAGES_API_URL,
         json=data,
@@ -30,29 +21,41 @@ def send_flowdock_message():
     )
 
 
+def debounced_value(pin):
+    count = 0
+    previous_value = pin.value()
+
+    while True:
+        count += 1
+
+        value = pin.value()
+        if value != previous_value:
+            count = 0
+
+        if count >= MAX_COUNT:
+            return value
+
+        previous_value = value
+
+
 def run():
-    wifi_connected = wifi.connect(credentials.WIFI_SSID, credentials.WIFI_PASSWORD, wait_time=5)
+    wlan = wifi.connect(credentials.WIFI_SSID, credentials.WIFI_PASSWORD)
 
-    # If wifi connection fails we simply sleep, and will try again upon waking.
-    if not wifi_connected:
-        enter_deepsleep()
+    d1_pin = machine.Pin(D1_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
 
-    pin = machine.Pin(SWITCH_PIN, machine.Pin.IN, machine.Pin.PULL_UP)
-
+    state = "Unoccupied"
     while True:
-        print(pin.value())
-        if pin.value() == 0:
-            send_flowdock_message()
+        if not wlan.isconnected():
+            machine.reset()
 
-    send_flowdock_message()
+        if state == "Unoccupied":
+            if debounced_value(d1_pin) == 0:
+                state = "Occupied"
+                print("Occupied")
+                send_flowdock_message("The toilet is now occupied. :nam_downthumb:")
 
-    # Wait for switch to be released.
-    while True:
-        pass
-
-    send_flowdock_message()
-
-    print("INFO: Closing the Wifi connection")
-    wifi.disconnect()
-
-    enter_deepsleep()
+        if state == "Occupied":
+            if debounced_value(d1_pin) == 1:
+                state = "Unoccupied"
+                print("Unoccupied")
+                send_flowdock_message("The toilet is now unoccupied. :nam_thumb:")

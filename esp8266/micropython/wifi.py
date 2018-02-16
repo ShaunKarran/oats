@@ -17,13 +17,13 @@ def connect(ssid, password, wait_time=0):
             print(".")
             wait_time -= 1
             if wait_time == 0:
-                return False
+                return wlan
 
     print("")
     print("INFO: WiFi connected")
     print('INFO: Network Config = ', wlan.ifconfig())
 
-    return True
+    return wlan
 
 
 def disconnect():
